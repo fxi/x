@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, RotateCcw } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, RotateCcw, Copy, Check } from 'lucide-react';
+import { Direction, encrypt, decrypt } from './helpers/encryption';
 
 type Mode = 'encrypt' | 'decrypt';
 
@@ -7,78 +8,51 @@ function App() {
   const [mode, setMode] = useState<Mode>('encrypt');
   const [input, setInput] = useState('');
   const [result, setResult] = useState('');
-  const [code, setCode] = useState<string[]>([]);
-  const [isComplete, setIsComplete] = useState(false);
+  const [code, setCode] = useState<Direction[]>([]);
+  const [copySuccess, setCopySuccess] = useState<'code' | 'result' | null>(null);
 
-  const handleArrowClick = (direction: string) => {
-    if (code.length >= 8 && !isComplete) {
-      setIsComplete(true);
-      processMessage();
-      return;
-    }
+  const handleCopy = async (type: 'code' | 'result') => {
+    const textToCopy = type === 'code' 
+      ? code.join(', ')
+      : result;
     
-    if (!isComplete) {
-      setCode([...code, direction]);
+    await navigator.clipboard.writeText(textToCopy);
+    setCopySuccess(type);
+    setTimeout(() => setCopySuccess(null), 2000);
+  };
+
+  const getDirectionIcon = (direction: Direction) => {
+    switch (direction) {
+      case 'up': return <ArrowUp className="w-4 h-4" />;
+      case 'down': return <ArrowDown className="w-4 h-4" />;
+      case 'left': return <ArrowLeft className="w-4 h-4" />;
+      case 'right': return <ArrowRight className="w-4 h-4" />;
     }
+  };
+
+  const handleArrowClick = (direction: Direction) => {
+    const newCode = [...code, direction];
+    setCode(newCode);
+    processMessage(newCode);
   };
 
   const reset = () => {
     setCode([]);
-    setIsComplete(false);
     setResult('');
   };
 
-  const processMessage = () => {
-    if (mode === 'encrypt') {
-      // Convert to binary and apply shifts based on code
-      const binary = stringToBinary(input);
-      const shifted = applyShifts(binary, code);
-      setResult(shifted);
-    } else {
-      // Apply reverse shifts and convert from binary
-      const shifted = applyShifts(input, code.reverse());
-      try {
-        const text = binaryToString(shifted);
-        setResult(text);
-      } catch {
-        setResult('Invalid binary code or wrong sequence');
+  const processMessage = (currentCode: Direction[]) => {
+    try {
+      if (mode === 'encrypt') {
+        const encrypted = encrypt(input, currentCode);
+        setResult(encrypted);
+      } else {
+        const decrypted = decrypt(input, currentCode);
+        setResult(decrypted);
       }
+    } catch {
+      setResult('Invalid input or wrong sequence');
     }
-  };
-
-  const stringToBinary = (str: string): string => {
-    return str.split('').map(char => 
-      char.charCodeAt(0).toString(2).padStart(8, '0')
-    ).join('');
-  };
-
-  const binaryToString = (binary: string): string => {
-    const bytes = binary.match(/.{1,8}/g) || [];
-    return bytes.map(byte => 
-      String.fromCharCode(parseInt(byte, 2))
-    ).join('');
-  };
-
-  const applyShifts = (binary: string, shifts: string[]): string => {
-    let result = binary;
-    shifts.forEach(shift => {
-      const mid = Math.floor(result.length / 2);
-      switch(shift) {
-        case 'up':
-          result = result.slice(mid) + result.slice(0, mid);
-          break;
-        case 'down':
-          result = result.slice(-mid) + result.slice(0, -mid);
-          break;
-        case 'left':
-          result = result.slice(1) + result.slice(0, 1);
-          break;
-        case 'right':
-          result = result.slice(-1) + result.slice(0, -1);
-          break;
-      }
-    });
-    return result;
   };
 
   return (
@@ -114,7 +88,7 @@ function App() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder={mode === 'encrypt' ? 'Enter message to encrypt...' : 'Enter binary code to decrypt...'}
-            className="w-full h-32 bg-gray-700 text-pink-500 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 placeholder-pink-500/50"
+            className="w-full h-32 bg-gray-700 text-pink-500 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 placeholder-pink-500/50 font-mono whitespace-pre-wrap"
           />
         </div>
 
@@ -158,26 +132,48 @@ function App() {
 
         {/* Code Display */}
         <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-pink-500/30">
-          <div className="text-center mb-2">Code Sequence ({code.length}/8):</div>
-          <div className="flex justify-center gap-2">
-            {Array(8).fill(null).map((_, i) => (
+          <div className="flex justify-between items-center mb-2">
+            <div>Code Sequence:</div>
+            {code.length > 0 && (
+              <button
+                onClick={() => handleCopy('code')}
+                className="p-2 hover:bg-gray-700 rounded-md transition-colors"
+                title="Copy code sequence"
+              >
+                {copySuccess === 'code' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </button>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {code.map((direction, i) => (
               <div
                 key={i}
-                className={`w-3 h-3 rounded-full ${
-                  code[i] 
-                    ? 'bg-pink-500 shadow-lg shadow-pink-500/50' 
-                    : 'bg-gray-700'
-                }`}
-              />
+                className="flex items-center justify-center bg-gray-700 p-2 rounded-md"
+                title={`Step ${i + 1}: ${direction}`}
+              >
+                {getDirectionIcon(direction)}
+              </div>
             ))}
           </div>
         </div>
 
         {/* Result Area */}
         <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-pink-500/30">
-          <div className="font-mono break-all">
-            {result || 'Result will appear here...'}
+          <div className="flex justify-between items-center mb-2">
+            <div>Result:</div>
+            {result && (
+              <button
+                onClick={() => handleCopy('result')}
+                className="p-2 hover:bg-gray-700 rounded-md transition-colors"
+                title="Copy result"
+              >
+                {copySuccess === 'result' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+              </button>
+            )}
           </div>
+          <pre className="font-mono break-all whitespace-pre-wrap">
+            {result || 'Result will appear here...'}
+          </pre>
         </div>
       </div>
     </div>
