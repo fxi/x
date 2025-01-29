@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, MouseEvent, TouchEvent } from 'react';
+import { IMAGE_CONFIG } from '../config/imageConfig';
 import { Download, Pencil, Eraser, RotateCcw } from 'lucide-react';
 
 interface ImageEditorProps {
@@ -14,7 +15,7 @@ export function ImageEditor({ binaryData, onClose }: ImageEditorProps) {
   const width = 100;
   const [isDrawMode, setIsDrawMode] = useState(true);
   const [isDrawing, setIsDrawing] = useState(false);
-  const cellSize = 6; // Smaller cell size for better mobile experience
+  const cellSize = IMAGE_CONFIG.scale; // Use scale from config
 
   useEffect(() => {
     // Initialize grid with binary data in first 8 columns
@@ -43,7 +44,7 @@ export function ImageEditor({ binaryData, onClose }: ImageEditorProps) {
     grid.forEach((row, y) => {
       row.forEach((cell, x) => {
         if (cell) {
-          ctx.fillStyle = '#ec4899'; // text-pink-500
+          ctx.fillStyle = IMAGE_CONFIG.color;
           ctx.fillRect(x * cellSize, y * cellSize, cellSize - 1, cellSize - 1);
         }
       });

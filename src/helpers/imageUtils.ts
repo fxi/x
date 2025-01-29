@@ -20,7 +20,7 @@ export const createBinaryImage = (binaryData: string): HTMLCanvasElement => {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   // Draw binary data
-  ctx.fillStyle = '#FFFFFF';
+  ctx.fillStyle = IMAGE_CONFIG.color;
   lines.forEach((line, y) => {
     for (let x = 0; x < 8; x++) {
       if (line[x] === '1') {
@@ -42,14 +42,19 @@ export const extractBinaryFromImage = async (canvas: HTMLCanvasElement): Promise
 
   const ctx = canvas.getContext('2d')!;
   const scale = IMAGE_CONFIG.scale;
+  const numLines = Math.floor(canvas.height / scale);
   const lines: string[] = [];
 
-  for (let y = 0; y < canvas.height; y += scale) {
+  for (let y = 0; y < numLines; y++) {
     let line = '';
-    for (let x = 0; x < 8 * scale; x += scale) {
-      const pixel = ctx.getImageData(x, y, 1, 1).data;
-      // Check if pixel is white (active)
-      line += pixel[0] > 127 ? '1' : '0';
+    for (let x = 0; x < 8; x++) {
+      const pixel = ctx.getImageData(
+        x * scale,
+        y * scale,
+        1,
+        1
+      ).data;
+      line += pixel[0] > IMAGE_CONFIG.threshold ? '1' : '0';
     }
     lines.push(validateBinaryString(line));
   }
@@ -63,12 +68,10 @@ export const fileToCanvas = async (file: File): Promise<HTMLCanvasElement> => {
   await new Promise<void>(resolve => {
     img.onload = () => resolve();
   });
-
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d')!;
   canvas.width = img.width;
   canvas.height = img.height;
-  ctx.drawImage(img, 0, 0);
-
+  ctx.drawImage(img, 0, 0, img.width, img.height);
   return canvas;
 };
