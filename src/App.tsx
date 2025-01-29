@@ -3,6 +3,7 @@ import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, RotateCcw, Cop
 import { ImageEditor } from './components/ImageEditor';
 import { Direction, encrypt, decrypt } from './helpers/encryption';
 import { fileToCanvas, extractBinaryFromImage } from './helpers/imageUtils';
+import { HelpModal } from './components/HelpModal';
 
 type Mode = 'encrypt' | 'decrypt';
 
@@ -14,6 +15,7 @@ function App() {
   const [code, setCode] = useState<Direction[]>([]);
   const [copySuccess, setCopySuccess] = useState<'code' | 'result' | null>(null);
   const [showImageEditor, setShowImageEditor] = useState(false);
+  const [showHelpModal, setShowHelpModal] = useState(false);
 
   const handleCopy = async (type: 'code' | 'result') => {
     const textToCopy = type === 'code' 
@@ -134,6 +136,13 @@ function App() {
               placeholder="Enter binary code to decrypt..."
               className="w-full h-32 bg-gray-700 text-pink-500 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 placeholder-pink-500/50 font-mono whitespace-pre-wrap transition-all duration-150"
             />
+            <button 
+              onClick={() => setShowHelpModal(true)}
+              className="text-[10px] hover:text-pink-400 block"
+            >
+              No way I'm doing that by hand
+            </button>
+
           </div>
         </div>
 
@@ -238,6 +247,7 @@ function App() {
           onClose={() => setShowImageEditor(false)}
         />
       )}
+      {showHelpModal && <HelpModal onClose={() => setShowHelpModal(false)} />}
     </div>
   );
 }

@@ -5,7 +5,7 @@ def extract_binary_from_image(image_path):
     # Load and convert image to grayscale
     img = Image.open(image_path).convert('L')
     
-    # Config values matching the TypeScript version
+    # Config values matching the pseudo code
     scale = 6
     threshold = 125
     data_bits = 8
@@ -18,7 +18,7 @@ def extract_binary_from_image(image_path):
     for y in range(num_lines):
         line = ''
         for x in range(data_bits):
-            # Sample pixel at scaled coordinates
+            # Sample top-left pixel of each block
             pixel = img.getpixel((x * scale, y * scale))
             # Convert to binary based on threshold
             bit = '1' if pixel > threshold else '0'

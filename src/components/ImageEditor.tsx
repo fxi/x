@@ -188,8 +188,8 @@ export function ImageEditor({ binaryData, onClose }: ImageEditorProps) {
             <div className="absolute left-12 top-0 h-full border-l border-pink-500/30" />
           </div>
 
-          <div className="text-xs text-pink-500/70 text-center">
-            First 8 columns are read-only • {isDrawMode ? 'Draw' : 'Erase'} mode
+          <div className="text-xs text-pink-500/70 text-center space-y-1">
+            <div>First 8 columns are read-only • {isDrawMode ? 'Draw' : 'Erase'} mode</div>
           </div>
         </div>
       </div>
