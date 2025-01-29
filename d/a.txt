@@ -1,3 +1,0 @@
-Hello! This is a test file.
-If you can read this, the GitHub Pages deployment is working correctly and serving static content from the /d directory.
-The path to this file should be: fxi.io/x/d/a.txt
