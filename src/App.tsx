@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, RotateCcw, Copy, Check } from 'lucide-react';
+import { ArrowUp, ArrowDown, ArrowLeft, ArrowRight, Lock, Unlock, RotateCcw, Copy, Check, Image } from 'lucide-react';
+import { ImageEditor } from './components/ImageEditor';
 import { Direction, encrypt, decrypt } from './helpers/encryption';
+import { fileToCanvas, extractBinaryFromImage } from './helpers/imageUtils';
 
 type Mode = 'encrypt' | 'decrypt';
 
 function App() {
   const [mode, setMode] = useState<Mode>('encrypt');
-  const [input, setInput] = useState('');
+  const [encryptInput, setEncryptInput] = useState('');
+  const [decryptInput, setDecryptInput] = useState('');
   const [result, setResult] = useState('');
   const [code, setCode] = useState<Direction[]>([]);
   const [copySuccess, setCopySuccess] = useState<'code' | 'result' | null>(null);
+  const [showImageEditor, setShowImageEditor] = useState(false);
 
   const handleCopy = async (type: 'code' | 'result') => {
     const textToCopy = type === 'code' 
@@ -41,13 +45,30 @@ function App() {
     setResult('');
   };
 
+  const handleDrop = async (e: React.DragEvent<HTMLTextAreaElement>) => {
+    e.preventDefault();
+    
+    if (mode !== 'decrypt') return;
+
+    const file = e.dataTransfer.files[0];
+    if (!file || !file.type.startsWith('image/')) return;
+
+    try {
+      const canvas = await fileToCanvas(file);
+      const binaryData = await extractBinaryFromImage(canvas);
+      setDecryptInput(binaryData);
+    } catch (error) {
+      console.error('Failed to extract binary data from image:', error);
+    }
+  };
+
   const processMessage = (currentCode: Direction[]) => {
     try {
       if (mode === 'encrypt') {
-        const encrypted = encrypt(input, currentCode);
+        const encrypted = encrypt(encryptInput, currentCode);
         setResult(encrypted);
       } else {
-        const decrypted = decrypt(input, currentCode);
+        const decrypted = decrypt(decryptInput, currentCode);
         setResult(decrypted);
       }
     } catch {
@@ -82,14 +103,38 @@ function App() {
           </button>
         </div>
 
-        {/* Input Area */}
+        {/* Input Areas */}
         <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-pink-500/30">
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={mode === 'encrypt' ? 'Enter message to encrypt...' : 'Enter binary code to decrypt...'}
-            className="w-full h-32 bg-gray-700 text-pink-500 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 placeholder-pink-500/50 font-mono whitespace-pre-wrap"
-          />
+          {/* Encrypt Input */}
+          <div className={mode === 'encrypt' ? 'block' : 'hidden'}>
+            <textarea
+              value={encryptInput}
+              onChange={(e) => setEncryptInput(e.target.value)}
+              placeholder="Enter message to encrypt..."
+              className="w-full h-32 bg-gray-700 text-pink-500 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 placeholder-pink-500/50 font-mono whitespace-pre-wrap transition-all duration-150"
+            />
+          </div>
+          
+          {/* Decrypt Input */}
+          <div className={mode === 'decrypt' ? 'block' : 'hidden'}>
+            <textarea
+              value={decryptInput}
+              onChange={(e) => setDecryptInput(e.target.value)}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add('ring-2', 'ring-pink-500');
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove('ring-2', 'ring-pink-500');
+              }}
+              onDrop={(e) => {
+                e.currentTarget.classList.remove('ring-2', 'ring-pink-500');
+                handleDrop(e);
+              }}
+              placeholder="Enter binary code to decrypt..."
+              className="w-full h-32 bg-gray-700 text-pink-500 p-3 rounded-md focus:outline-none focus:ring-2 focus:ring-pink-500 placeholder-pink-500/50 font-mono whitespace-pre-wrap transition-all duration-150"
+            />
+          </div>
         </div>
 
         {/* Control Pad */}
@@ -161,21 +206,38 @@ function App() {
         <div className="bg-gray-800 p-4 rounded-lg shadow-lg border border-pink-500/30">
           <div className="flex justify-between items-center mb-2">
             <div>Result:</div>
-            {result && (
-              <button
-                onClick={() => handleCopy('result')}
-                className="p-2 hover:bg-gray-700 rounded-md transition-colors"
-                title="Copy result"
-              >
-                {copySuccess === 'result' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-              </button>
-            )}
+            <div className="flex gap-2">
+              {result && mode === 'encrypt' && (
+                <button
+                  onClick={() => setShowImageEditor(true)}
+                  className="p-2 hover:bg-gray-700 rounded-md transition-colors"
+                  title="Open image editor"
+                >
+                  <Image className="w-4 h-4" />
+                </button>
+              )}
+              {result && (
+                <button
+                  onClick={() => handleCopy('result')}
+                  className="p-2 hover:bg-gray-700 rounded-md transition-colors"
+                  title="Copy result"
+                >
+                  {copySuccess === 'result' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                </button>
+              )}
+            </div>
           </div>
           <pre className="font-mono break-all whitespace-pre-wrap">
             {result || 'Result will appear here...'}
           </pre>
         </div>
       </div>
+      {showImageEditor && result && (
+        <ImageEditor
+          binaryData={result}
+          onClose={() => setShowImageEditor(false)}
+        />
+      )}
     </div>
   );
 }
